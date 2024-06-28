@@ -1,8 +1,5 @@
-import { HTMLToJSON } from 'html-to-json-parser'; // ES6
-import { number } from 'prop-types';
 import * as cheerio from 'cheerio';
-import { $ } from 'bun';
-
+import * as fs from "fs"
 
 
 // 1) Fetch the raw HTML
@@ -67,24 +64,98 @@ async function fetchHtmlSize(url: string): Promise<string | undefined> {
 // console.log("the data size is:", (await fetchHtmlSize("https://en.wikipedia.org/wiki/Main_Page")), "KB")
 // console.log("the data size is:", (await fetchHtmlSize("https://pokeapi.co/api/v2/pokemon/ditto")), "KB")
 
-
-//parse the raw html
-function getAnchorTags(html: string): string[] | undefined {
+// parse the raw html
+function extractLinks(html: string, linkvolume: number): string[] {
     const $ = cheerio.load(html)
-    const findLinks = $('a')
-    console.log(findLinks.get())
-    const retrieveHREF = findLinks.map((index, element) => {
+    const findAnchors = $('a')
+    // console.log(findAnchors.get())
+    const retrieveHREF = findAnchors.map((index, element) => {
         // console.log(element)
-        return $(element).attr('href');
+        return $(element).attr('href')?.replaceAll(`\\"`, '');
     })
-    console.log(retrieveHREF.get())
+    // console.log(retrieveHREF.get())
     // console.log()
     const getHREFS = retrieveHREF.get();
-    return getHREFS
+
+    if (getHREFS.length < linkvolume) {
+        console.log("go to the next depth");
+    }
+    else if (getHREFS.length === linkvolume) {
+        return getHREFS;
+    }
+    else { return getHREFS.slice(0, linkvolume); }
+
+    return getHREFS;
 }
 
 
-const newData = getAnchorTags(fetchWikipedia)
-console.log(newData)
+const newData = extractLinks(fetchWikipedia, 10)
 
 // console.log(fetchWikipedia)
+
+//create an output directory that will hold the cleaned HTML content 
+const makeOutputDirectory = (() =>
+    !fs.existsSync(`./src/scrapedData`) && fs.mkdirSync(`./src/scrapedData`, { recursive: true }))
+makeOutputDirectory();
+
+
+//write data into the output directory that holds the cleaned HTML content
+// const filePath = './src/scrapedData/data.html'
+// const sampleData = 'this is some sample data im creating for seeding the data.html file'
+
+// fs.writeFile(filePath, sampleData, (err) => {
+//     if (err)
+//         console.log(err);
+//     else {
+//         console.log('file written successfully \n');
+//     }
+// })
+
+async function scrapeSite(url: string, depth: number, linkvolume: number) {
+    if (depth <= 0) {
+        console.log("reached maximum depth");
+        return;
+    }
+
+    //fetches HTML from url
+    const rawHTML = await fetchHTML(url);
+
+    //if there is rawHTML extracted from the URL, then...
+    if (rawHTML) {
+        //extract the links using the extract links function written above
+        const fileLinks = extractLinks(rawHTML, linkvolume);
+        //create a directory to put the extracted links in
+        makeOutputDirectory();
+
+        //initialize the output directory path from the directory made above
+        const filePath = `./src/scrapedData/${depth}.txt`;
+        //if there are links, join them and break at the end of each link 
+        //OR if there are no links, respond with links not found
+        const scrapedData = fileLinks?.join('\n') || "links were not found"
+
+        //write the file using the file path made above. 
+        //add in the scraped data 
+        //write a callback function that passes an error message if there is an error
+        fs.appendFile(filePath, scrapedData, (err) => {
+            if (err)
+                console.log(err);
+            else {
+                console.log('file written successfully \n');
+            }
+        });
+        // if depth is greater than 0, recursively scrape each link
+
+        //use for...of loop to iterate over elements in the fileLinks array 
+        for (let link of fileLinks) {
+            if (link && link.startsWith('http')) {
+                scrapeSite(link, depth - 1, linkvolume);
+            }
+        }
+
+    }
+
+}
+
+scrapeSite("https://www.buzzfeed.com/", 2, 10);
+
+

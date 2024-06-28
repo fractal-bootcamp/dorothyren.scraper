@@ -1,0 +1,10 @@
+#buzz-content
+https://www.buzzfeed.com
+https://www.buzzfeed.com/search
+https://www.buzzfeed.com/tvandmovies
+https://www.buzzfeed.com/celebrity
+https://www.buzzfeed.com/bestoftheinternet
+https://www.buzzfeed.com/animals
+https://www.buzzfeed.com/music
+https://www.buzzfeed.com/rewind
+https://www.buzzfeed.com/books
