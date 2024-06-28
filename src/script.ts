@@ -1,5 +1,7 @@
 import * as cheerio from 'cheerio';
 import * as fs from "fs"
+import { program } from "commander";
+
 
 
 // 1) Fetch the raw HTML
@@ -68,16 +70,19 @@ async function fetchHtmlSize(url: string): Promise<string | undefined> {
 function extractLinks(html: string, linkvolume: number): string[] {
     const $ = cheerio.load(html)
     const findAnchors = $('a')
-    // console.log(findAnchors.get())
+
     const retrieveHREF = findAnchors.map((index, element) => {
-        // console.log(element)
+        // from all the 'a' anchor tags, find the 'hrefs'
+        //clean the hrefs by taking the initial "\\"" with empty string
+        //this is helpful later on when we address depth and need to access each link
         return $(element).attr('href')?.replaceAll(`\\"`, '');
     })
-    // console.log(retrieveHREF.get())
-    // console.log()
+
+    // store the hrefs we retrieved from the html in an array
     const getHREFS = retrieveHREF.get();
 
     if (getHREFS.length < linkvolume) {
+        getHREFS.slice(0, linkvolume)
         console.log("go to the next depth");
     }
     else if (getHREFS.length === linkvolume) {
@@ -156,6 +161,21 @@ async function scrapeSite(url: string, depth: number, linkvolume: number) {
 
 }
 
-scrapeSite("https://www.buzzfeed.com/", 2, 10);
+//scraper script
+program
+    .name('webscraper')
+    .description('simple webscraper to extract links')
+    .version('1.0.0');
+
+program.command('scrape')
+    .description('takes in a url, fetches HTML from that url, returns extracted links from the url and predetermined number of nested url links')
+    .argument('<url>', 'URL to scrape')
+    .argument('<depth>', 'Depth of nested URLs to scrape')
+    .argument('<linkCount>', 'number of links to scrape from each URL')
+    .action((url, depth, linkCount) => {
+        scrapeSite(url, depth, linkCount)
+    });
+
+program.parse();
 
 
